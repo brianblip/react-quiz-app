@@ -1,46 +1,57 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import Header from "./Components/Header";
+import Loader from "./Components/Loader";
+import Error from "./Components/Error";
+import Main from "./Components/Main";
+import { useEffect, useReducer } from "react";
+import StartScreen from "./Components/StartScreen";
 
-function App() {
-  const [count, setCount] = useState(0)
+const initialState = {
+  questions: [],
 
-  return (
-    <>
-        <div>
-          <img src={reactLogo} className="App-logo" alt="logo" />
-          <img src={viteLogo} className="App-logo" alt="logo" />
-          <h1>Hello Vite + React!</h1>
-          <p>
-            <button onClick={() => setCount((count) => count + 1)}>count is: {count}</button>
-          </p>
-          <p>
-            Edit <code>App.jsx</code> and save to test HMR updates.
-          </p>
-          <p>
-            <a
-              className="App-link"
-              href="https://reactjs.org"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learn React
-            </a>
-            {' | '}
-            <a
-              className="App-link"
-              href="https://vitejs.dev/guide/features.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Vite Docs
-            </a>
-          </p>
-          
-        </div>
-    </>
-  )
+  //'loading', 'ready', 'error', 'active', 'finished'
+  status: "loading",
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case "dataReceived":
+      return { ...state, questions: action.payload, status: "ready" };
+    case "dataFailed":
+      return { ...state, status: "error" };
+    case "start":
+      return { ...state, status: "active" };
+    default:
+      throw new Error("Invalid action type");
+  }
 }
 
-export default App
+function App() {
+  const [{ questions, status }, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/questions");
+        const data = await response.json();
+        dispatch({ type: "dataReceived", payload: data });
+      } catch (error) {
+        dispatch({ type: "dataFailed", payload: error });
+      }
+    };
+    fetchQuestions();
+  }, []);
+
+  return (
+    <div>
+      <Header />
+      <Main>
+        {status === "loading" && <Loader />}
+        {status === "error" && <Error />}
+        {status === "ready" && <StartScreen />}
+      </Main>
+    </div>
+  );
+}
+
+export default App;
